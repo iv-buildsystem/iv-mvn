@@ -14,12 +14,12 @@ Where are all the small-scale mvn repos that are ready out of the box?... Here's
 
 ```bash
 docker run \
- --name mvn-it-simple \
+ --name mvn-it-easy \
  --publish 8080:8080 \
  --volume ${PWD}/data:/data \
  --env MVN_AUTH_ADMIN_USERNAME=admin \
  --env MVN_AUTH_ADMIN_PASSWORD=password \
  --env MVN_AUTH_PUBLIC_SNAPSHOT=true \
  --env MVN_AUTH_PUBLIC_RELEASE=true \
- mvn-it-simple
+ mvn-it-easy
 ```
