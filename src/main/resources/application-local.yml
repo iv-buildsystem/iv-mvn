@@ -40,3 +40,15 @@ mvn:
     # A file-system implementation of the file server
     file-system:
       repository: ./mvn/www/release
+
+
+  # Publishes artifacts to another server
+  publish:
+    # publisher type: Currently only supports "git"
+    type: git
+
+    git:
+      # The local clone location
+      local-repository: ./mvn/git
+      # The remote repository authenticated via ssh
+      remote-repository: ${GIT_SSH_REMOTE_REPOSITORY}

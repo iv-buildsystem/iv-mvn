@@ -8,10 +8,7 @@ import org.ivcode.mvn.services.fileserver.models.ResourceChildInfo
 import org.ivcode.mvn.services.fileserver.models.ResourceInfo
 import org.ivcode.mvn.util.*
 import org.ivcode.mvn.util.deleteRecursively
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.MediaType
-import org.springframework.stereotype.Service
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.URI
@@ -43,6 +40,7 @@ public class FileServerServiceFileSystemImpl (
 
         return ResourceInfo(
             uri = URI.create("/${repositoryName}/${resolvedPath.relativeTo(root)}"),
+            path = path.pathString,
             name = resolvedPath.name,
             mimeType = getMime(resolvedPath),
             isDirectory = resolvedPath.isDirectory(),
@@ -52,7 +50,7 @@ public class FileServerServiceFileSystemImpl (
     }
 
     override fun get(resourceInfo: ResourceInfo, out: OutputStream) {
-        val path = root.resolve(resourceInfo.uri.path).full()
+        val path = root.resolve(resourceInfo.path).full()
         checkFile(path)
 
         path.inputStream().use {
@@ -153,9 +151,22 @@ public class FileServerServiceFileSystemImpl (
      * Returns the Mime for the given file. If the file is a directory, `null` is returned
      */
     private fun getMime(file: Path): MediaType? {
+        file.extension
         return if(file.isDirectory()) {
             null
         } else {
+            return getMime(file.extension)
+        }
+    }
+
+    private fun getMime(fileExtension: String): MediaType = when (fileExtension.lowercase()) {
+        "xml", "pom" -> {
+            MediaType.APPLICATION_XML
+        }
+        "md5", "sha1", "sha256", "sha512" -> {
+            MediaType.TEXT_PLAIN
+        }
+        else -> {
             MediaType.APPLICATION_OCTET_STREAM
         }
     }

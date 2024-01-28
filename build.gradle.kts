@@ -28,6 +28,11 @@ dependencies {
     // Freemarker
     implementation("org.freemarker:freemarker")
 
+    // JGit
+    implementation("org.eclipse.jgit:org.eclipse.jgit:6.8.0.202311291450-r")
+
+    // Mvn
+    implementation("org.apache.maven:maven-repository-metadata:3.9.6")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 }

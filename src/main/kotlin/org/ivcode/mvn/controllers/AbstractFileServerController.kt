@@ -70,6 +70,6 @@ public open abstract class AbstractFileServerController (
             .removePrefix("/"))
         val context = Path(servletContext.contextPath.removePrefix("/"))
 
-        return path.resolve(context)
+        return context.relativize(path.resolve(context))
     }
 }

@@ -5,7 +5,10 @@ import java.net.URI
 import java.nio.file.Path
 
 public data class ResourceInfo (
+    /** url path */
     val uri: URI,
+    /** path relative to the repository */
+    val path: String,
     val name: String,
     val mimeType: MediaType? = null,
     val isDirectory: Boolean,
