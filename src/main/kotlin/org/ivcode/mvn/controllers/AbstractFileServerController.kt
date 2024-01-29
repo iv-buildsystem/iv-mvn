@@ -30,7 +30,7 @@ public open abstract class AbstractFileServerController (
         }
 
         val stream = StreamingResponseBody { out ->
-            fileServerService.get(pathInfo, out)
+            fileServerService.get(pathInfo.path, out)
         }
 
         return ResponseEntity.ok().run {

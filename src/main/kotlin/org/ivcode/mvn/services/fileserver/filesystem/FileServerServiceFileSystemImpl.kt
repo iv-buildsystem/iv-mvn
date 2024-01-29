@@ -13,6 +13,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.URI
 import java.nio.file.*
+import java.util.function.Function
 import kotlin.io.path.*
 
 /**
@@ -40,23 +41,30 @@ public class FileServerServiceFileSystemImpl (
 
         return ResourceInfo(
             uri = URI.create("/${repositoryName}/${resolvedPath.relativeTo(root)}"),
-            path = path.pathString,
+            path = path,
             name = resolvedPath.name,
             mimeType = getMime(resolvedPath),
             isDirectory = resolvedPath.isDirectory(),
             isRoot = resolvedPath.isSameFileAs(root),
+            lastModified = resolvedPath.getLastModifiedTime().toInstant(),
+            size = resolvedPath.fileSize(),
             children = getChildInfo(resolvedPath)
         )
     }
 
-    override fun get(resourceInfo: ResourceInfo, out: OutputStream) {
-        val path = root.resolve(resourceInfo.path).full()
+    override fun get(path: Path, out: OutputStream): Unit = get(path) { input ->
+        input.transferTo(out)
+    }
+
+    override fun <T> get(path: Path, exe: Function<InputStream, T>): T {
+        val path = root.resolve(path).full()
         checkFile(path)
 
-        path.inputStream().use {
-            it.transferTo(out)
-            out.flush()
+        if(!path.exists()) {
+            throw NotFoundException()
         }
+
+        return path.inputStream().use { exe.apply(it) }
     }
 
     override fun post(path: Path, input: InputStream) {
@@ -136,12 +144,13 @@ public class FileServerServiceFileSystemImpl (
         val children = mutableListOf<ResourceChildInfo>()
 
         path.listChildren().forEach { child ->
-            children.add(
-                ResourceChildInfo(
+            children.add(ResourceChildInfo(
+                path = child.relativeTo(root),
                 name = child.name,
-                isDirectory = child.isDirectory()
-            )
-            )
+                isDirectory = child.isDirectory(),
+                size = child.fileSize(),
+                lastModified = child.getLastModifiedTime().toInstant(),
+            ))
         }
 
         return children.toList()

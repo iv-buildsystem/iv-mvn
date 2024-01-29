@@ -14,6 +14,7 @@ import org.eclipse.jgit.util.FS
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.InputStream
 import java.nio.file.Path
 import java.time.Instant
 import kotlin.io.path.*
@@ -82,15 +83,6 @@ public fun Repository.readMetadata(groupId: String, artifactId: String): Metadat
     return metadata
 }
 
-public fun Repository.cacheMvnArtifacts (
-    groupId: String,
-    artifactId: String,
-    metadata: Metadata,
-    versionDirectory: Path
-) {
-
-}
-
 public fun DirCacheBuilder.addDataEntry (
     inserter: ObjectInserter,
     path: String,
@@ -104,59 +96,29 @@ public fun DirCacheBuilder.addDataEntry (
     entry.length = data.size
     entry.setLastModified(lastModified)
 
-    val id = ByteArrayInputStream(data).use { input ->
-        inserter.insert(Constants.OBJ_BLOB, data.size.toLong(), input)
-    }
+    val id = inserter.insert(Constants.OBJ_BLOB, data)
+
     entry.setObjectId(id)
-    this.add(entry)
+    add(entry)
 }
 
-public fun DirCacheBuilder.addMetadataEntry(
+public fun DirCacheBuilder.addRawEntry (
     inserter: ObjectInserter,
-    metadata: Metadata,
+    path: String,
+    length: Long,
+    input: InputStream,
     fileMode: FileMode = FileMode.REGULAR_FILE,
-    lastModified: Instant = Instant.now()
+    lastModified: Instant = Instant.now(),
 ) {
-    val data = ByteArrayOutputStream().run {
-        use { MetadataXpp3Writer().write(it, metadata) }
-        toByteArray()
-    }
+    val entry = DirCacheEntry(path)
 
-    val path = metadata.toPath().toString()
-    addDataEntry(inserter, path, data, fileMode, lastModified)
-}
+    entry.fileMode = fileMode
+    entry.length = length.toInt()
+    entry.setLastModified(lastModified)
 
-/**
- * Adds the contents of a file to the cache (stage)
- *
- * @param inserter The [ObjectInserter]
- * @param gitPath The target path within git
- * @param file The file that we're reading
- */
-public fun DirCacheBuilder.addFileEntry (
-    inserter: ObjectInserter,
-    gitPath: String,
-    file: Path,
-) {
-    file
-        .validateExists()
-        .validateIsFile()
+    val id = inserter.insert(Constants.OBJ_BLOB, length, input)
 
-    val fileLength = file.fileSize()
-
-    val entry = DirCacheEntry(gitPath)
-
-    entry.length = fileLength.toInt()
-    entry.setLastModified(file.getLastModifiedTime().toInstant())
-    entry.fileMode = if (file.isExecutable()) {
-        FileMode.EXECUTABLE_FILE
-    } else {
-        FileMode.REGULAR_FILE
-    }
-
-    val id = file.inputStream().use { input ->
-        inserter.insert(Constants.OBJ_BLOB, fileLength, input)
-    }
     entry.setObjectId(id)
-    this.add(entry)
+    add(entry)
 }
+

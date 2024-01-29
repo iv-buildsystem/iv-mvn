@@ -11,3 +11,9 @@ public class ForbiddenException: RuntimeException()
 
 @ResponseStatus(HttpStatus.CONFLICT)
 public class ConflictException: RuntimeException()
+
+@ResponseStatus(HttpStatus.BAD_REQUEST)
+public class BadRequestException: RuntimeException()
+
+@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+public class InternalServerErrorException: RuntimeException()

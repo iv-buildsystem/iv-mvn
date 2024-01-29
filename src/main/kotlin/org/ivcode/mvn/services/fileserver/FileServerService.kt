@@ -4,6 +4,8 @@ import org.ivcode.mvn.services.fileserver.models.ResourceInfo
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.file.Path
+import java.util.function.Consumer
+import java.util.function.Function
 
 public interface FileServerService {
 
@@ -26,7 +28,8 @@ public interface FileServerService {
      * @throws org.ivcode.mvn.exceptions.NotFoundException if the resource doesn't exist or if it's a directory
      * @throws org.ivcode.mvn.exceptions.ForbiddenException if the path isn't allowed
      */
-    public fun get(resourceInfo: ResourceInfo, out: OutputStream)
+    public fun get(path: Path, out: OutputStream)
+    public fun <T> get(path: Path, exe: Function<InputStream, T>): T
 
     /**
      * Writes the given resource to the input stream
