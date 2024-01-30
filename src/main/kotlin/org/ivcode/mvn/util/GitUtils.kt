@@ -2,8 +2,8 @@ package org.ivcode.mvn.util
 
 import org.apache.maven.artifact.repository.metadata.Metadata
 import org.apache.maven.artifact.repository.metadata.io.xpp3.MetadataXpp3Reader
-import org.apache.maven.artifact.repository.metadata.io.xpp3.MetadataXpp3Writer
 import org.eclipse.jgit.attributes.Attributes
+import org.eclipse.jgit.dircache.DirCache
 import org.eclipse.jgit.dircache.DirCacheBuilder
 import org.eclipse.jgit.dircache.DirCacheEntry
 import org.eclipse.jgit.lib.*
@@ -12,12 +12,11 @@ import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.PathFilter
 import org.eclipse.jgit.util.FS
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
-import java.nio.file.Path
 import java.time.Instant
 import kotlin.io.path.*
+import java.util.function.Function
 
 public data class GitFileInfo (
     val id: ObjectId,
@@ -37,8 +36,7 @@ public fun openRepository(file: File): Repository = RepositoryBuilder().run {
 
 public fun Repository.checkout(branch: String): RefUpdate.Result? {
     val ref = findRef(branch)
-    updateRef(Constants.HEAD, ref==null)
-    val refUpdate = updateRef(Constants.HEAD, ref == null)
+    val refUpdate = updateRef(Constants.HEAD, false)
     refUpdate.isForceUpdate = true
 
     return refUpdate.link(ref.name)
@@ -72,7 +70,7 @@ public fun Repository.getFileInfo(path: String): GitFileInfo? {
 }
 
 public fun Repository.readMetadata(groupId: String, artifactId: String): Metadata? {
-    val path = toPath(groupId, artifactId).pathString
+    val path = getMetadataPath(groupId, artifactId).pathString
     val info = getFileInfo(path) ?: return null
     val loader = open(info.id)
 
@@ -89,17 +87,15 @@ public fun DirCacheBuilder.addDataEntry (
     data: ByteArray,
     fileMode: FileMode = FileMode.REGULAR_FILE,
     lastModified: Instant = Instant.now(),
-) {
-    val entry = DirCacheEntry(path)
-
-    entry.fileMode = fileMode
-    entry.length = data.size
-    entry.setLastModified(lastModified)
+): DirCacheEntry = DirCacheEntry(path).apply {
+    this.fileMode = fileMode
+    this.length = data.size
+    this.setLastModified(lastModified)
 
     val id = inserter.insert(Constants.OBJ_BLOB, data)
 
-    entry.setObjectId(id)
-    add(entry)
+    this.setObjectId(id)
+    this@addDataEntry.add(this)
 }
 
 public fun DirCacheBuilder.addRawEntry (
@@ -109,16 +105,30 @@ public fun DirCacheBuilder.addRawEntry (
     input: InputStream,
     fileMode: FileMode = FileMode.REGULAR_FILE,
     lastModified: Instant = Instant.now(),
-) {
-    val entry = DirCacheEntry(path)
-
-    entry.fileMode = fileMode
-    entry.length = length.toInt()
-    entry.setLastModified(lastModified)
+): DirCacheEntry = DirCacheEntry(path).apply {
+    this.fileMode = fileMode
+    this.length = length.toInt()
+    this.setLastModified(lastModified)
 
     val id = inserter.insert(Constants.OBJ_BLOB, length, input)
 
-    entry.setObjectId(id)
-    add(entry)
+    this.setObjectId(id)
+    this@addRawEntry.add(this)
+}
+
+public fun <T> DirCache.use (func: Function<DirCache, T>): T {
+    try {
+        return func.apply(this)
+    } finally {
+        unlock()
+    }
+}
+
+public fun <T>  DirCacheBuilder.use (func: Function<DirCacheBuilder, T>): T {
+    try {
+        return func.apply(this)
+    } finally {
+        finish()
+    }
 }
 

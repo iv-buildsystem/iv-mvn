@@ -25,14 +25,13 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.springframework.boot:spring-boot-starter-security")
 
-    // Freemarker
+    // Apache
     implementation("org.freemarker:freemarker")
+    implementation("commons-codec:commons-codec")
+    implementation("org.apache.maven:maven-repository-metadata:3.9.6")
 
     // JGit
     implementation("org.eclipse.jgit:org.eclipse.jgit:6.8.0.202311291450-r")
-
-    // Mvn
-    implementation("org.apache.maven:maven-repository-metadata:3.9.6")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 }

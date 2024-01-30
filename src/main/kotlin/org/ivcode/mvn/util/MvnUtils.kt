@@ -1,6 +1,7 @@
 package org.ivcode.mvn.util
 
 import org.apache.maven.artifact.repository.metadata.Metadata
+import org.apache.maven.artifact.repository.metadata.Versioning
 import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDateTime
@@ -9,14 +10,34 @@ import java.time.format.DateTimeFormatter
 import kotlin.io.path.Path
 
 private const val VERSION_SNAPSHOT_SUFFIX = "-SNAPSHOT"
-private const val METADATA_LAST_UPDATED_PATTERN = "yyyyMMddHHmmss"
+private const val METADATA_LAST_UPDATED_PATTERN = "uuuuMMddHHmmss"
 
 private const val METADATA_FILENAME = "maven-metadata.xml"
 private val METADATA_LAST_UPDATED_FORMATTER = DateTimeFormatter.ofPattern(METADATA_LAST_UPDATED_PATTERN)
 
+public enum class MvnHashType(
+    public val extension: String
+) {
+    MD5("md5") {
+        override fun hex(data: ByteArray): String = data.md5Hex()
+    },
+    SHA1("sha1") {
+        override fun hex(data: ByteArray): String = data.sha1Hex()
+    },
+    SHA256("sha256") {
+        override fun hex(data: ByteArray): String = data.sha256Hex()
+    },
+    SHA512("sha512") {
+        override fun hex(data: ByteArray): String = data.sha512Hex()
+    };
+
+    public abstract fun hex(data: ByteArray): String
+}
+
 public fun createMetadata(groupId: String, artifactId: String): Metadata = Metadata().apply {
     setGroupId(groupId)
     setArtifactId(artifactId)
+    versioning = Versioning()
 }
 
 public fun isSnapshot(version: String): Boolean =
@@ -30,14 +51,19 @@ public fun toPath(groupId: String, artifactId: String, version: String? = null):
     }
 }
 
-public fun getMetadataPath(groupId: String, artifactId: String): Path {
-    return toPath(groupId, artifactId).resolve(METADATA_FILENAME)
-}
+public fun getMetadataPath(
+    groupId: String,
+    artifactId: String,
+    version: String? = null,
+    hashType: MvnHashType? = null
+): Path =
+    toPath(groupId, artifactId, version).resolve("$METADATA_FILENAME${if(hashType!=null) {".${hashType.extension}"} else {""} }")
 
-public fun Metadata.toPath(): Path = toPath(
-    groupId = this.groupId,
-    artifactId = this.artifactId,
-    version = this.version
+public fun Metadata.toPath(hashType: MvnHashType? = null): Path = getMetadataPath (
+    groupId = this.groupId!!,
+    artifactId = this.artifactId!!,
+    version = this.version,
+    hashType = hashType
 )
 
 public fun Metadata.lastModifiedData(): Instant? {
@@ -50,7 +76,7 @@ public fun Metadata.lastModifiedData(): Instant? {
 public fun Metadata.isVersioned(version: String): Boolean =
     // There's conflicting information about case-sensitivity in versions.
     // From what I can tell, they are case-sensitive through and through
-    !versioning.versions.none { it == version }
+    !(versioning?.versions?.none { it == version } ?: true)
 
 
 /**
@@ -82,7 +108,7 @@ public fun Metadata.addVersion(version: String, lastUpdated: Instant): Metadata?
     if(!isSnapshot(version)) {
         new.versioning.release = version
     }
-    new.versioning.lastUpdated = METADATA_LAST_UPDATED_FORMATTER.format(lastUpdated)
+    new.versioning.lastUpdated = METADATA_LAST_UPDATED_FORMATTER.withZone(ZoneId.systemDefault()).format(lastUpdated)
 
     return new
 }
