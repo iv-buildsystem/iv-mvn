@@ -34,14 +34,13 @@ public fun openRepository(file: File): Repository = RepositoryBuilder().run {
     build().apply { close() }
 }
 
-public fun Repository.checkout(branch: String): RefUpdate.Result? {
+public fun Repository.softCheckout(branch: String): RefUpdate.Result? {
     val ref = findRef(branch)
     val refUpdate = updateRef(Constants.HEAD, false)
     refUpdate.isForceUpdate = true
 
     return refUpdate.link(ref.name)
 }
-
 public fun Repository.getFileInfo(path: String): GitFileInfo? {
     val head = resolve("HEAD")
     val walk = RevWalk(this)
